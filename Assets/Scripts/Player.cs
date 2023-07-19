@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-#if false
+#if false // Obsolete
     public bool isInSafeZone;
 
     public float cameraRotationSpeed = 90f; // The speed at which the camera rotates
@@ -174,23 +174,110 @@ public class Player : MonoBehaviour
         }
     }
 #endif
-    public bool isHaveKey;
-    public bool isInSafeZone;
+
+    [Header("References")]
+    [SerializeField] private Transform _PlayerCameraHolder;
+    [SerializeField] private Camera _PlayerCamera;
+
+    [Header("Objects")]
+    public bool IsHaveKey;
+    public bool IsInSafeZone;
+
+    [Header("Rotation")]
+    [SerializeField] private float _RotationDuration;
+    [SerializeField, Min(0)] private int _RtationDegree;
+    private bool _IsRotating = false;
+    private float _RotationTimer;
+    private Vector3 _StartEulerAngle;
+    private Vector3 _EndEulerAngle;
+
+    [Header("Movement")]
+    [SerializeField] private float _MoveSpeed;
 
     private void Update()
     {
         Rotation();
+        Movement();
     }
 
+    /// <summary>
+    /// Rotate 90 degree per trigger.
+    /// </summary>
     private void Rotation()
     {
+        if (_IsRotating) return;
+
         if (Input.GetKeyDown(KeyCode.Q))
         {
+            _IsRotating = true;
 
+            _RotationTimer = 0;
+
+            _StartEulerAngle = _PlayerCameraHolder.localEulerAngles;
+            _EndEulerAngle = _PlayerCameraHolder.localEulerAngles - new Vector3(0, _RtationDegree, 0);
+
+            StartCoroutine(IERotatePlayer());
         }
-        if (Input.GetKeyDown(KeyCode.E))
+        else if (Input.GetKeyDown(KeyCode.E))
         {
+            _IsRotating = true;
 
+            _RotationTimer = 0;
+
+            _StartEulerAngle = _PlayerCameraHolder.localEulerAngles;
+            _EndEulerAngle = _PlayerCameraHolder.localEulerAngles + new Vector3(0, _RtationDegree, 0);
+
+            StartCoroutine(IERotatePlayer());
         }
+    }
+
+    /// <summary>
+    /// Move toward camera forward.
+    /// </summary>
+    private void Movement()
+    {
+        Vector3 _MoveDirection = Vector3.zero;
+        Vector3 _CameraRelatedForward = new Vector3(_PlayerCamera.transform.forward.x, 0, _PlayerCamera.transform.forward.z).normalized;
+        Vector3 _CameraRelatedRight = new Vector3(_PlayerCamera.transform.right.x, 0, _PlayerCamera.transform.right.z).normalized;
+
+        if (Input.GetKey(KeyCode.W))
+        {
+            _MoveDirection += _CameraRelatedForward;
+        }
+        if (Input.GetKey(KeyCode.S))
+        {
+            _MoveDirection -= _CameraRelatedForward;
+        }
+        if (Input.GetKey(KeyCode.A))
+        {
+            _MoveDirection -= _CameraRelatedRight;
+        }
+        if (Input.GetKey(KeyCode.D))
+        {
+            _MoveDirection += _CameraRelatedRight;
+        }
+
+        transform.Translate(_MoveDirection * _MoveSpeed * Time.deltaTime);
+    }
+
+    private IEnumerator IERotatePlayer()
+    {
+        if (_RotationTimer >= _RotationDuration)
+        {
+            _IsRotating = false;
+            yield break;
+        }
+
+        _RotationTimer += Time.deltaTime;
+        _PlayerCameraHolder.localEulerAngles = Vector3.Lerp(_StartEulerAngle, _EndEulerAngle, _RotationTimer / _RotationDuration);
+
+        yield return new WaitForEndOfFrame();
+
+        StartCoroutine(IERotatePlayer());
+    }
+
+    private IEnumerator IEMovePlayer()
+    {
+        yield break;
     }
 }
